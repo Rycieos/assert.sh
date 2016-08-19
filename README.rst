@@ -8,8 +8,8 @@
 :Author: Robert Lehmann
 :License: LGPLv3
 
-.. image:: https://travis-ci.org/lehmannro/assert.sh.svg?branch=master
-   :target: https://travis-ci.org/lehmannro/assert.sh
+.. image:: https://travis-ci.org/Rycieos/assert.sh.svg?branch=master
+   :target: https://travis-ci.org/Rycieos/assert.sh
 
 Example
 =======
@@ -122,6 +122,14 @@ Reference
 
   Verify `command` terminated with the expected status code. The default
   `exitcode` is assumed to be 0.
+
++ ``assert_equals <param1> <param2>``
+
+  Verify that the two strings param1 and param2 are equal.
+
++ ``assert_not_equals <param1> <param2>``
+
+  Verify that the two strings param1 and param2 are not equal.
 
 + ``assert_end [suite]``
 
