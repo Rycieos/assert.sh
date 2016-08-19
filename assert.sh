@@ -141,6 +141,38 @@ _assert_fail() {
     (( tests_failed++ )) || :
 }
 
+assert_equals() {
+    # assert_raises <param1> <param2>
+    (( tests_ran++ )) || :
+    [[ -z "$DISCOVERONLY" ]] || return
+    expected=$(echo -ne "${1:-}")
+    result=$(echo -ne "${2:-}")
+    if [[ "$result" == "$expected" ]]; then
+        [[ -z "$DEBUG" ]] || echo -n .
+        return
+    fi
+    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
+    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
+    [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
+    _assert_fail "expected $expected${_indent}to be equal to $result"
+}
+
+assert_not_equals() {
+    # assert_raises <param1> <param2>
+    (( tests_ran++ )) || :
+    [[ -z "$DISCOVERONLY" ]] || return
+    expected=$(echo -ne "${1:-}")
+    result=$(echo -ne "${2:-}")
+    if [[ "$result" != "$expected" ]]; then
+        [[ -z "$DEBUG" ]] || echo -n .
+        return
+    fi
+    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
+    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
+    [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
+    _assert_fail "expected $expected${_indent}not to be equal to $result"
+}
+
 skip_if() {
     # skip_if <command ..>
     (eval $@) > /dev/null 2>&1 && status=0 || status=$?
