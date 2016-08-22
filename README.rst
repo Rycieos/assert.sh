@@ -118,6 +118,11 @@ Reference
   control sequences ``echo -e`` interprets, eg. ``\n`` for a newline. The
   default `stdout` is assumed to be empty.
 
++ ``assert_contains <command> [stdout] [stdin]``
+
+  Same as `assert`, but search for the expected output in the actual output
+  instead of exact matching.
+
 + ``assert_raises <command> [exitcode] [stdin]``
 
   Verify `command` terminated with the expected status code. The default
