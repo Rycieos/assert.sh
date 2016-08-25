@@ -136,6 +136,14 @@ Reference
 
   Verify that the two strings param1 and param2 are not equal.
 
++ ``assert_exists <file>``
+
+  Verify that the input filename exists.
+
++ ``assert_not_exists <file>``
+
+  Verify that the input filename does not exist.
+
 + ``assert_end [suite]``
 
   Finalize a test suite and print statistics.

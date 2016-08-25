@@ -115,6 +115,13 @@ assert_equals 'foo' 'foo'
 assert_raises "_clean; assert_not_equals 'foo' 'bar'"
 assert_raises "_clean; assert_not_equals 'foo' 'foo'" 1
 assert_not_equals 'foo' 'bar'
+# assert_exists
+assert_raises "_clean; assert_exists 'assert.sh'"
+assert_raises "_clean; assert_exists 'foobar'" 1
+assert_raises "_clean; assert_not_exists 'foobar'"
+assert_raises "_clean; assert_not_exists 'assert.sh'" 1
+assert_exists "assert.sh"
+assert_not_exists "foobar"
 
 assert_end interaction
 

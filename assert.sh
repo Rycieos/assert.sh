@@ -171,7 +171,7 @@ assert_equals() {
     result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
     [[ -z "$result" ]] && result="nothing" || result="\"$result\""
     [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
-    _assert_fail "expected $expected${_indent}to be equal to $result"
+    _assert_fail "expected $expected${_indent}to be equal to $result" "$1 == $2"
 }
 
 assert_not_equals() {
@@ -187,7 +187,31 @@ assert_not_equals() {
     result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
     [[ -z "$result" ]] && result="nothing" || result="\"$result\""
     [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
-    _assert_fail "expected $expected${_indent}not to be equal to $result"
+    _assert_fail "expected $expected${_indent}not to be equal to $result" "$1 != $2"
+}
+
+assert_exists() {
+    # assert_exists <file>
+    (( tests_ran++ )) || :
+    [[ -z "$DISCOVERONLY" ]] || return
+    file=$(echo -ne "${1:-}")
+    if [[ -e "$file" ]]; then
+        [[ -z "$DEBUG" ]] || echo -n .
+        return
+    fi
+    _assert_fail "expected file $file to exist" "$1"
+}
+
+assert_not_exists() {
+    # assert_not_exists <file>
+    (( tests_ran++ )) || :
+    [[ -z "$DISCOVERONLY" ]] || return
+    file=$(echo -ne "${1:-}")
+    if [[ ! -e "$file" ]]; then
+        [[ -z "$DEBUG" ]] || echo -n .
+        return
+    fi
+    _assert_fail "expected file $file not to exist" "$1"
 }
 
 skip_if() {
