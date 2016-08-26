@@ -79,7 +79,7 @@ assert_end() {
                             - ${tests_starttime/%N/000000000} ))")"  # in ns
     tests="$tests_ran ${*:+$* }tests"
     [[ -n "$DISCOVERONLY" ]] && echo "collected $tests." && _assert_reset && return
-    [[ -n "$DEBUG" ]] && echo
+    _debug
     # to get report_time split tests_time on 2 substrings:
     #   ${tests_time:0:${#tests_time}-9} - seconds
     #   ${tests_time:${#tests_time}-9:3} - milliseconds
@@ -97,58 +97,12 @@ assert_end() {
     _assert_reset
 }
 
-assert() {
-    # assert <command> <expected stdout> [stdin]
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
-    expected=$(echo -ne "${2:-}")
-    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
-    if [[ "$result" == "$expected" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
-        return
-    fi
-    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
-    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
-    [[ -z "$2" ]] && expected="nothing" || expected="\"$2\""
-    _assert_fail "expected $expected${_indent}got $result" "$1" "$3"
-}
-
-assert_contains() {
-    # assert_contains <command> <part of expected stdout> [stdin]
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
-    expected=$(echo -ne "${2:-}")
-    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
-    if [[ "$result" == *"$expected"* ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
-        return
-    fi
-    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
-    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
-    [[ -z "$2" ]] && expected="nothing" || expected="\"$2\""
-    _assert_fail "expected *${expected}*${_indent}got $result" "$1" "$3"
-}
-
-assert_raises() {
-    # assert_raises <command> <expected code> [stdin]
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
-    status=0
-    (eval "$1" <<< "${3:-}") > /dev/null 2>&1 || status=$?
-    expected=${2:-0}
-    if [[ "$status" -eq "$expected" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
-        return
-    fi
-    _assert_fail "program terminated with code $status instead of $expected" "$1" "$3"
-}
-
 _assert_fail() {
     # _assert_fail <failure> <command> <stdin>
-    [[ -z "$DEBUG" ]] || echo -n X
+    _debug fail
     report="test #$tests_ran \"$2${3:+ <<< $3}\" failed:${_indent}$1"
     if [[ -n "$STOP" ]]; then
-        [[ -z "$DEBUG" ]] || echo
+        _debug
         echo "$report"
         exit 1
     fi
@@ -157,45 +111,104 @@ _assert_fail() {
     return 1
 }
 
+_debug() {
+    [[ -z "$DEBUG" ]] && return
+    if [[ "$1" == "pass" ]]; then
+        echo -n .
+    elif [[ "$1" == "fail" ]]; then
+        echo -n X
+    elif [[ "$1" == "skip" ]]; then
+        echo -n s
+    else
+        echo
+    fi
+}
+
+_start_test() {
+    (( tests_ran++ )) || :
+    [[ -z "$DISCOVERONLY" ]] || return 1
+}
+
+_input_format() {
+    expected=$(echo -ne "${2:-}")
+    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
+}
+
+_result_format() {
+    result="$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' <<< "$result")"
+    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
+    [[ -z "$expected" ]] && expected="nothing" || expected="\"$expected\""
+}
+
+assert() {
+    # assert <command> <expected stdout> [stdin]
+    _start_test || return
+    _input_format "$@"
+    if [[ "$result" == "$expected" ]]; then
+        _debug pass
+        return
+    fi
+    _result_format
+    _assert_fail "expected $expected${_indent}got $result" "$1" "$3"
+}
+
+assert_contains() {
+    # assert_contains <command> <part of expected stdout> [stdin]
+    _start_test || return
+    _input_format "$@"
+    if [[ "$result" == *"$expected"* ]]; then
+        _debug pass
+        return
+    fi
+    _result_format
+    _assert_fail "expected *${expected}*${_indent}got $result" "$1" "$3"
+}
+
+assert_raises() {
+    # assert_raises <command> <expected code> [stdin]
+    _start_test || return
+    status=0
+    (eval "$1" <<< "${3:-}") > /dev/null 2>&1 || status=$?
+    expected=${2:-0}
+    if [[ "$status" -eq "$expected" ]]; then
+        _debug pass
+        return
+    fi
+    _assert_fail "program terminated with code $status instead of $expected" "$1" "$3"
+}
+
 assert_equals() {
     # assert_equals <param1> <param2>
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
+    _start_test || return
     expected=$(echo -ne "${1:-}")
     result=$(echo -ne "${2:-}")
     if [[ "$result" == "$expected" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
+        _debug pass
         return
     fi
-    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
-    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
-    [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
+    _result_format
     _assert_fail "expected $expected${_indent}to be equal to $result" "$1 == $2"
 }
 
 assert_not_equals() {
     # assert_not_equals <param1> <param2>
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
+    _start_test || return
     expected=$(echo -ne "${1:-}")
     result=$(echo -ne "${2:-}")
     if [[ "$result" != "$expected" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
+        _debug pass
         return
     fi
-    result="$(sed -e :a -e '$!N;s/\n/\\n/;ta' <<< "$result")"
-    [[ -z "$result" ]] && result="nothing" || result="\"$result\""
-    [[ -z "$2" ]] && expected="nothing" || expected="\"$1\""
+    _result_format
     _assert_fail "expected $expected${_indent}not to be equal to $result" "$1 != $2"
 }
 
 assert_exists() {
     # assert_exists <file>
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
+    _start_test || return
     file=$(echo -ne "${1:-}")
     if [[ -e "$file" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
+        _debug pass
         return
     fi
     _assert_fail "expected file $file to exist" "$1"
@@ -203,11 +216,10 @@ assert_exists() {
 
 assert_not_exists() {
     # assert_not_exists <file>
-    (( tests_ran++ )) || :
-    [[ -z "$DISCOVERONLY" ]] || return
+    _start_test || return
     file=$(echo -ne "${1:-}")
     if [[ ! -e "$file" ]]; then
-        [[ -z "$DEBUG" ]] || echo -n .
+        _debug pass
         return
     fi
     _assert_fail "expected file $file not to exist" "$1"
@@ -238,7 +250,7 @@ _skip() {
         # yet because *after* the command we need to reset extdebug/errexit (in
         # another DEBUG trap.)
         tests_trapped=1
-        [[ -z "$DEBUG" ]] || echo -n s
+        _debug skip
         return 1
     else
         trap - DEBUG
