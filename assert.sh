@@ -24,14 +24,14 @@ export INVARIANT=${INVARIANT:-}
 export CONTINUE=${CONTINUE:-}
 
 args="$(getopt -n "$0" -l \
-    verbose,help,stop,discover,invariant,continue vhxdic $*)" \
+    verbose,help,stop,discover,invariant,continue vhxdic "$@")" \
 || exit -1
 for arg in $args; do
     case "$arg" in
         -h)
             echo "$0 [-vxidc]" \
                 "[--verbose] [--stop] [--invariant] [--discover] [--continue]"
-            echo "`sed 's/./ /g' <<< "$0"` [-h] [--help]"
+            echo "$(sed 's/./ /g' <<< "$0") [-h] [--help]"
             exit 0;;
         --help)
             cat <<EOF
@@ -74,8 +74,8 @@ assert_end() {
     # assert_end [suite ..]
     tests_endtime="$(date +%s%N)"
     # required visible decimal place for seconds (leading zeros if needed)
-    local tests_time="$( \
-        printf "%010d" "$(( ${tests_endtime/%N/000000000} 
+    local tests_time
+    tests_time="$( printf "%010d" "$(( ${tests_endtime/%N/000000000} 
                             - ${tests_starttime/%N/000000000} ))")"  # in ns
     tests="$tests_ran ${*:+$* }tests"
     [[ -n "$DISCOVERONLY" ]] && echo "collected $tests." && _assert_reset && return
@@ -93,7 +93,6 @@ assert_end() {
         for error in "${tests_errors[@]}"; do echo "$error"; done
         echo "$tests_failed of $tests failed$report_time."
     fi
-    tests_failed_previous=$tests_failed
     [[ $tests_failed -gt 0 ]] && tests_suite_status=1
     _assert_reset
 }
@@ -103,7 +102,7 @@ assert() {
     (( tests_ran++ )) || :
     [[ -z "$DISCOVERONLY" ]] || return
     expected=$(echo -ne "${2:-}")
-    result="$(eval 2>/dev/null $1 <<< ${3:-})" || true
+    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
     if [[ "$result" == "$expected" ]]; then
         [[ -z "$DEBUG" ]] || echo -n .
         return
@@ -119,7 +118,7 @@ assert_contains() {
     (( tests_ran++ )) || :
     [[ -z "$DISCOVERONLY" ]] || return
     expected=$(echo -ne "${2:-}")
-    result="$(eval 2>/dev/null $1 <<< ${3:-})" || true
+    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
     if [[ "$result" == *"$expected"* ]]; then
         [[ -z "$DEBUG" ]] || echo -n .
         return
@@ -135,7 +134,7 @@ assert_raises() {
     (( tests_ran++ )) || :
     [[ -z "$DISCOVERONLY" ]] || return
     status=0
-    (eval $1 <<< ${3:-}) > /dev/null 2>&1 || status=$?
+    (eval "$1" <<< "${3:-}") > /dev/null 2>&1 || status=$?
     expected=${2:-0}
     if [[ "$status" -eq "$expected" ]]; then
         [[ -z "$DEBUG" ]] || echo -n .
@@ -146,10 +145,10 @@ assert_raises() {
 
 _assert_fail() {
     # _assert_fail <failure> <command> <stdin>
-    [[ -n "$DEBUG" ]] && echo -n X
+    [[ -z "$DEBUG" ]] || echo -n X
     report="test #$tests_ran \"$2${3:+ <<< $3}\" failed:${_indent}$1"
     if [[ -n "$STOP" ]]; then
-        [[ -n "$DEBUG" ]] && echo
+        [[ -z "$DEBUG" ]] || echo
         echo "$report"
         exit 1
     fi
@@ -216,7 +215,7 @@ assert_not_exists() {
 
 skip_if() {
     # skip_if <command ..>
-    (eval $@) > /dev/null 2>&1 && status=0 || status=$?
+    (eval "$@") > /dev/null 2>&1 && status=0 || status=$?
     [[ "$status" -eq 0 ]] || return
     skip
 }
@@ -232,6 +231,7 @@ skip() {
     tests_trapped=0
     trap _skip DEBUG
 }
+
 _skip() {
     if [[ $tests_trapped -eq 0 ]]; then
         # DEBUG trap for command we want to skip.  Do not remove the handler
@@ -247,7 +247,6 @@ _skip() {
         return 0
     fi
 }
-
 
 _assert_reset
 : ${tests_suite_status:=0}  # remember if any of the tests failed so far
