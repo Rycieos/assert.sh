@@ -129,11 +129,6 @@ _start_test() {
     [[ -z "$DISCOVERONLY" ]] || return 1
 }
 
-_input_format() {
-    expected=$(echo -ne "${2:-}")
-    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
-}
-
 _result_format() {
     result="$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' <<< "$result")"
     [[ -z "$result" ]] && result="nothing" || result="\"$result\""
@@ -143,7 +138,8 @@ _result_format() {
 assert() {
     # assert <command> <expected stdout> [stdin]
     _start_test || return
-    _input_format "$@"
+    expected=$(echo -ne "${2:-}")
+    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
     if [[ "$result" == "$expected" ]]; then
         _debug pass
         return
@@ -155,7 +151,8 @@ assert() {
 assert_contains() {
     # assert_contains <command> <part of expected stdout> [stdin]
     _start_test || return
-    _input_format "$@"
+    expected=$(echo -ne "${2:-}")
+    result="$(eval 2>/dev/null "$1" <<< "${3:-}")" || true
     if [[ "$result" == *"$expected"* ]]; then
         _debug pass
         return
