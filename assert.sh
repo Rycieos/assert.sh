@@ -113,11 +113,11 @@ _assert_fail() {
 
 _debug() {
     [[ -z "$DEBUG" ]] && return
-    if [[ "$1" == "pass" ]]; then
+    if [[ "${1:-}" == "pass" ]]; then
         echo -n .
-    elif [[ "$1" == "fail" ]]; then
+    elif [[ "${1:-}" == "fail" ]]; then
         echo -n X
-    elif [[ "$1" == "skip" ]]; then
+    elif [[ "${1:-}" == "skip" ]]; then
         echo -n s
     else
         echo
@@ -145,7 +145,7 @@ assert() {
         return
     fi
     _result_format
-    _assert_fail "expected $expected${_indent}got $result" "$1" "$3"
+    _assert_fail "expected $expected${_indent}got $result" "$1" "${3:-}"
 }
 
 assert_contains() {
@@ -158,7 +158,7 @@ assert_contains() {
         return
     fi
     _result_format
-    _assert_fail "expected *${expected}*${_indent}got $result" "$1" "$3"
+    _assert_fail "expected *${expected}*${_indent}got $result" "$1" "${3:-}"
 }
 
 assert_raises() {
@@ -171,7 +171,7 @@ assert_raises() {
         _debug pass
         return
     fi
-    _assert_fail "program terminated with code $status instead of $expected" "$1" "$3"
+    _assert_fail "program terminated with code $status instead of $expected" "$1" "${3:-}"
 }
 
 assert_equals() {
